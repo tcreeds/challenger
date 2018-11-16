@@ -1,47 +1,49 @@
-const axios = require('axios')
-const bodyParser = require('body-parser')
-const express = require('express')
-const app = express()
+var qs = require('querystring')
+var AWS = require("aws-sdk")
+AWS.config.update({
+	region: "us-east-1"
+});
 
-const port = 8081
-const webhook = process.env.WEBHOOK_URL
+var dynamodb = new AWS.DynamoDB()
 
-var jsonParser = bodyParser.json()
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
+exports.handler = (event, context, callback) => {
+    if (event.path.includes("challenge")){
+    	console.log("/challenge")
+    	const body = qs.parse(decodeURIComponent(event.body))
+    	console.log(body)
+    	//respond(callback, body)
 
-app.post('/challenge', urlencodedParser, (req, res) => {
-	console.log("/challenge")
-	console.log(req.body)
-	res.send({
-		text: `<@${req.body.user_id}> has issued a challenge!`,
-		attachments: [
-			challengeAttachment(req.body.user_id, req.body.user_name)
-		]
-	})
-})
-app.post('/reply', urlencodedParser, (req, res) => {
-	console.log(req)
-	const body = JSON.parse(decodeURIComponent(req.body.payload))
-	console.log("/reply")
-	console.log(body)
-	if (body.callback_id == "reply-to-challenge"){
-		const user1Split = body.actions[0].value.split(":")
-		const user1 = { id: user1Split[0], name: user1Split[1] }
-		const user2 = { id: body.user.id, name: body.user.name }
-		res.send(replyToChallenge(user1, user2))
-	}
-	else if (body.callback_id == "post-match"){
-		if (body.actions[0].value == "na") {
-			res.send(`<@${body.user.id}> backed out`)
+    	respond(callback, {
+    		text: `<@${body.user_id}> has issued a challenge!`,
+    		attachments: [
+    			challengeAttachment(body.user_id, body.user_name)
+    		]
+    	})
+    }
+    else if (event.path.includes("reply")){
+    	console.log(event)
+    	const body = JSON.parse(decodeURIComponent(event.body).replace("payload=", ""))
+		console.log("/reply")
+		console.log(body)
+		if (body.callback_id == "reply-to-challenge"){
+			const user1Split = body.actions[0].value.split(":")
+			const user1 = { id: user1Split[0], name: user1Split[1] }
+			const user2 = { id: body.user.id, name: body.user.name }
+			respond(callback, replyToChallenge(user1, user2))
 		}
-		else {
-			const split = body.actions[0].value.split(":")
-			res.send({ text: `<@${split[0]}> beat <@${split[1]}>!` })
+		else if (body.callback_id == "post-match"){
+			if (body.actions[0].value == "na") {
+				respond(callback, `<@${body.user.id}> backed out`)
+			}
+			else {
+				const split = body.actions[0].value.split(":")
+				saveMatch(split[0], split[1])
+				respond(callback, { text: `<@${split[0]}> beat <@${split[1]}>!` })
+			}
 		}
-	}
-})
+    }
+}
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
 function replyToChallenge(user1, user2){
 	return {
@@ -91,4 +93,37 @@ function challengeAttachment(id, name){
 			}
 		]
 	}
+}
+
+function saveMatch(winner, loser){
+	var params = {
+		Item: {
+			"Timestamp": {
+				S: `${Date.now()}`
+			}, 
+			"Winner": {
+				S: `${winner}`
+			}, 
+			"Loser": {
+				S: `${loser}`
+			}
+		}, 
+		ReturnConsumedCapacity: "TOTAL", 
+		TableName: "challenger"
+	};
+	dynamodb.putItem(params, function(err, data) {
+		console.log(err)
+		console.log(data)
+	})
+}
+
+function respond(callback, data){
+    const response = {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify(data),
+    };
+    callback(null, response)
 }

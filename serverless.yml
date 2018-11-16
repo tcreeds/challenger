@@ -1,0 +1,59 @@
+service: challenger-api
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: test
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - dynamodb:Query
+      - dynamodb:Scan
+      - dynamodb:GetItem
+      - dynamodb:PutItem
+      - dynamodb:UpdateItem
+      - dynamodb:DeleteItem
+    Resource: 
+      Fn::Join:
+        - ''
+        - - 'arn:aws:dynamodb:us-east-1:'
+          - Ref: AWS::AccountId
+          - ':table/challenger'
+
+package:
+  include:
+    - index.js
+    - package-lock.json
+    - package.json
+
+functions:
+  index:
+    handler: index.handler
+    events:
+      - http: POST challenge
+      - http: POST reply
+
+resources:
+  Resources:
+    DynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: challenger
+        AttributeDefinitions:
+          - AttributeName: Timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: Timestamp
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        Tags:
+        - Key: Name
+          Value: challenger-dynamo
+        - Key: lm_app
+          Value: challenger
+        - Key: lm_app_env
+          Value: sandbox
+        - Key: lm_sbu
+          Value: CI
