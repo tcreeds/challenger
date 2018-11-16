@@ -14,6 +14,7 @@ exports.handler = (event, context, callback) => {
     	//respond(callback, body)
 
     	respond(callback, {
+			response_type: "in_channel",
     		text: `<@${body.user_id}> has issued a challenge!`,
     		attachments: [
     			challengeAttachment(body.user_id, body.user_name)
@@ -41,7 +42,7 @@ exports.handler = (event, context, callback) => {
 				respond(callback, { text: `<@${split[0]}> beat <@${split[1]}>!` })
 			}
 		}
-    }
+	}
 }
 
 
@@ -50,9 +51,10 @@ function replyToChallenge(user1, user2){
 		text: `<@${user1.id}> has issued a challenge!`,
 		attachments: [
 			{
-				text: `<@${user2.id}> accepts your challenge!`
+				text: `<@${user2.id}> accepts your challenge! <@${user1.id}>, prepare for battle!`
 			},
 			{
+				text: "Who won???",
 				fallback: 'somethin',
 				callback_id: "post-match",
 				actions: [
