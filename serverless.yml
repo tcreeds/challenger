@@ -25,6 +25,9 @@ package:
     - index.js
     - package-lock.json
     - package.json
+    - app/**
+  exclude:
+    - node_modules/**
 
 functions:
   index:
