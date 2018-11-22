@@ -35,7 +35,7 @@ export default {
                 }
                 else {
                     const split = body.actions[0].value.split(":")
-                    saveMatch(split[0], split[1])
+                    ChallengeService.saveMatch(split[0], split[1], DAte.now())
                     this.respond(callback, { text: `<@${split[0]}> beat <@${split[1]}>!` })
                 }
             }
