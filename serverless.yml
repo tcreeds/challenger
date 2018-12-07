@@ -4,6 +4,9 @@ provider:
   name: aws
   runtime: nodejs8.10
   stage: test
+  environment:
+    BOT_TOKEN: ${ssm:challenger-bot-token-${opt:stage, self:provider.stage}}
+    STAGE: ${opt:stage, self:provider.stage}
   iamRoleStatements:
   - Effect: Allow
     Action:
@@ -18,7 +21,7 @@ provider:
         - ''
         - - 'arn:aws:dynamodb:us-east-1:'
           - Ref: AWS::AccountId
-          - ':table/challenger'
+          - ':table/challenger-${opt:stage, self:provider.stage}'
 
 package:
   include:
@@ -41,7 +44,7 @@ resources:
     DynamoDbTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: challenger
+        TableName: challenger-${opt:stage, self:provider.stage}
         AttributeDefinitions:
           - AttributeName: Timestamp
             AttributeType: S

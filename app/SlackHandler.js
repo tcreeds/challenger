@@ -3,7 +3,7 @@ var qs = require('querystring')
 
 class SlackHandler {
     handle(event, context, callback) {
-        this.challengeService = new ChallengeService()
+        this.challengeService = new ChallengeService(process.env.BOT_TOKEN, process.env.STAGE)
         if (event.path.includes("list-challenges")){
             console.log("/list-challenges")
             const body = qs.parse(decodeURIComponent(event.body))
