@@ -1,28 +1,34 @@
 const ChallengeService = require('./ChallengeService')
+var qs = require('querystring')
 
-export default {
+class SlackHandler {
     handle(event, context, callback) {
-        if (event.path.includes("challenge")){
+        this.challengeService = new ChallengeService()
+        if (event.path.includes("list-challenges")){
+            console.log("/list-challenges")
+            const body = qs.parse(decodeURIComponent(event.body))
+            this.challengeService.getMatches().then(matches => {
+                this.respond(callback, {
+                    response_type: "in_channel",
+                    text: matches
+                })
+            })
+            
+        }
+        else if (event.path.includes("challenge")){
             console.log("/challenge")
             const body = qs.parse(decodeURIComponent(event.body))
-            console.log(body)
-            //respond(callback, body)
-            let name = ""
-            if (body.text && body.text.length > 0)
-                name = body.text
             this.respond(callback, {
                 response_type: "in_channel",
-                text: `<@${body.user_id}> has issued a challenge! <${name}>`,
+                text: `<@${body.user_id}> has issued a challenge!`,
                 attachments: [
                     this.challengeAttachment(body.user_id, body.user_name)
                 ]
             })
         }
         else if (event.path.includes("reply")){
-            console.log(event)
-            const body = JSON.parse(decodeURIComponent(event.body).replace("payload=", ""))
             console.log("/reply")
-            console.log(body)
+            const body = JSON.parse(decodeURIComponent(event.body).replace("payload=", ""))
             if (body.callback_id == "reply-to-challenge"){
                 const user1Split = body.actions[0].value.split(":")
                 const user1 = { id: user1Split[0], name: user1Split[1] }
@@ -35,12 +41,12 @@ export default {
                 }
                 else {
                     const split = body.actions[0].value.split(":")
-                    ChallengeService.saveMatch(split[0], split[1], DAte.now())
+                    this.challengeService.saveMatch(split[0], split[1], Date.now())
                     this.respond(callback, { text: `<@${split[0]}> beat <@${split[1]}>!` })
                 }
             }
         }
-    },
+    }
 
 
     replyToChallenge(user1, user2){
@@ -77,9 +83,9 @@ export default {
                 }
             ]
         }
-    },
+    }
 
-    challengeAttachment(id, name){
+    challengeAttachment(id, name, target){
         return  {
             fallback: "Somethin goofed",
             callback_id: "reply-to-challenge",
@@ -92,7 +98,7 @@ export default {
                 }
             ]
         }
-    },
+    }
 
     respond(callback, data){
         const response = {
@@ -106,3 +112,5 @@ export default {
     }
 
 }
+
+module.exports = SlackHandler

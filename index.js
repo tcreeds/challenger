@@ -1,5 +1,5 @@
-var qs = require('querystring')
+
 var SlackHandler = require('./app/SlackHandler')
 
 
-exports.slackHandler = SlackHandler.handle
+exports.handler = (event, context, callback) => { new SlackHandler().handle(event, context, callback) }
